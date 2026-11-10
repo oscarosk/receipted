@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { identityFromCode } from "@/lib/paypal";
+import { emailOf, identityFromCode } from "@/lib/paypal";
 import { readGate, updateGate } from "@/lib/gateStore";
 import { baseUrl } from "@/lib/baseUrl";
 
@@ -19,7 +19,12 @@ export async function GET(req: NextRequest) {
     const { orders } = await readGate();
     const order = orders.find((o) => o.orderId === orderId);
     const reviewerPayerId = who.payer_id;
-    const matches = Boolean(order?.payerId && reviewerPayerId && order.payerId === reviewerPayerId);
+    // Strong match: the PayPal account ID. Fallback when that attribute is not granted: the account email.
+    const reviewerEmail = emailOf(who);
+    const byId = Boolean(order?.payerId && reviewerPayerId && order.payerId === reviewerPayerId);
+    const byEmail =
+      !reviewerPayerId && Boolean(order?.payerEmail && reviewerEmail && order.payerEmail.toLowerCase() === reviewerEmail);
+    const matches = byId || byEmail;
     await updateGate((s) => {
       s.checks.unshift({
         orderId,
@@ -27,7 +32,11 @@ export async function GET(req: NextRequest) {
         verifiedAccount: who.verified_account === true || who.verified_account === "true",
         matches,
         at: new Date().toISOString(),
-        note: reviewerPayerId ? undefined : "PayPal did not return a payer ID; check the app's Log in with PayPal attributes",
+        note: reviewerPayerId
+          ? "matched on PayPal account ID"
+          : reviewerEmail
+            ? `no payer ID granted; compared account email ${reviewerEmail}`
+            : "PayPal returned neither payer ID nor email; check the app's Log in with PayPal attributes",
       });
     });
     const res = NextResponse.redirect(`${base}/gate?order=${orderId}`);

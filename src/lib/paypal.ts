@@ -132,7 +132,10 @@ export function refundCapture(captureId: string) {
 
 // ---------- Log in with PayPal (OpenID Connect) ----------
 
-export const LOGIN_SCOPES = "openid https://uri.paypal.com/services/paypalattributes";
+// Scopes must match the attributes ticked in the app's Log in with PayPal settings, or PayPal answers
+// "invalid scope". Override with PAYPAL_LOGIN_SCOPES (space-separated) without touching code.
+export const LOGIN_SCOPES =
+  process.env.PAYPAL_LOGIN_SCOPES?.trim() || "openid https://uri.paypal.com/services/paypalattributes";
 
 export function loginUrl(redirectUri: string, state: string) {
   const q = new URLSearchParams({
@@ -146,7 +149,20 @@ export function loginUrl(redirectUri: string, state: string) {
   return `${WEB_BASE}/connect?${q.toString()}`;
 }
 
-export type UserInfo = { user_id?: string; payer_id?: string; verified_account?: boolean | string; sub?: string };
+export type UserInfo = {
+  user_id?: string;
+  payer_id?: string;
+  verified_account?: boolean | string;
+  sub?: string;
+  email?: string;
+  emails?: { value?: string; primary?: boolean; confirmed?: boolean }[];
+};
+
+/** The reviewer's primary email, if the email scope was granted. */
+export function emailOf(u: UserInfo): string | undefined {
+  const e = u.emails?.find((x) => x.primary)?.value ?? u.emails?.[0]?.value ?? u.email;
+  return e?.trim().toLowerCase() || undefined;
+}
 
 /** Exchanges a Log in with PayPal authorization code and returns the signed-in account's identity. */
 export async function identityFromCode(code: string): Promise<UserInfo> {

@@ -43,7 +43,12 @@ export default function GateClient({ initialOrderId, initialError }: { initialOr
   const checks = state.checks.filter((c) => c.orderId === order?.orderId);
   const sameBuyer = checks.find((c) => c.matches);
   const otherBuyer = checks.find((c) => !c.matches);
-  const refundEvent = state.events.find((e) => e.verified && e.captureId && e.captureId === order?.captureId);
+  const refundEvent = state.events.find(
+    (e) =>
+      e.verified &&
+      (e.type === "PAYMENT.CAPTURE.REFUNDED" || e.type === "PAYMENT.CAPTURE.REVERSED") &&
+      e.captureId === order?.captureId,
+  );
 
   async function buy() {
     setBusy(true);
@@ -116,7 +121,7 @@ export default function GateClient({ initialOrderId, initialError }: { initialOr
           <p key={c.at}>
             {c.matches ? "Match" : "No match"}: reviewer payer ID <code>{c.reviewerPayerId ?? "none"}</code>, verified account{" "}
             <b>{String(c.verifiedAccount)}</b>
-            {c.note && <span className="text-rose-700"> ({c.note})</span>}
+            {c.note && <span className="text-zinc-500"> ({c.note})</span>}
           </p>
         ))}
       </Step>
