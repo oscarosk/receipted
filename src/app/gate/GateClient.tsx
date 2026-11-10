@@ -48,10 +48,13 @@ export default function GateClient({ initialOrderId, initialError }: { initialOr
   async function buy() {
     setBusy(true);
     const res = await fetch("/api/gate/order", { method: "POST" });
-    const json = await res.json();
+    const json = (await res.json().catch(() => ({ error: `Server returned ${res.status}` }))) as {
+      approveUrl?: string;
+      error?: string;
+    };
     if (json.approveUrl) window.location.href = json.approveUrl;
     else {
-      setError(JSON.stringify(json).slice(0, 300));
+      setError(json.error ?? "Could not create the order");
       setBusy(false);
     }
   }
@@ -60,7 +63,10 @@ export default function GateClient({ initialOrderId, initialError }: { initialOr
     if (!order) return;
     setBusy(true);
     const res = await fetch("/api/gate/refund", { method: "POST", body: JSON.stringify({ orderId: order.orderId }) });
-    if (!res.ok) setError(await res.text());
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { error?: string } | null;
+      setError(json?.error ?? `Refund failed (${res.status})`);
+    }
     setBusy(false);
     refresh();
   }

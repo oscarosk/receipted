@@ -4,9 +4,13 @@ import { readGate } from "@/lib/gateStore";
 
 // Step 5: refund the capture. The proof flips only when PayPal's verified webhook confirms it.
 export async function POST(req: Request) {
-  const { orderId } = (await req.json()) as { orderId?: string };
-  const order = (await readGate()).orders.find((o) => o.orderId === orderId);
-  if (!order?.captureId) return NextResponse.json({ error: "No capture for that order" }, { status: 400 });
-  const refund = await refundCapture(order.captureId);
-  return NextResponse.json({ refundId: refund.id, status: refund.status });
+  try {
+    const { orderId } = (await req.json()) as { orderId?: string };
+    const order = (await readGate()).orders.find((o) => o.orderId === orderId);
+    if (!order?.captureId) return NextResponse.json({ error: "No capture for that order" }, { status: 400 });
+    const refund = await refundCapture(order.captureId);
+    return NextResponse.json({ refundId: refund.id, status: refund.status });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Refund failed" }, { status: 500 });
+  }
 }
