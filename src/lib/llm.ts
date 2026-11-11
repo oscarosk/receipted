@@ -12,5 +12,5 @@ export function llm() {
   return client;
 }
 
-// Reasoning models spend part of the budget thinking, so keep it roomy and effort low.
-export const reasoning = { max_completion_tokens: 2500, reasoning_effort: "low" as const };
+// Responses API settings. Reasoning models spend part of the budget thinking, so keep it roomy and effort low.
+export const reasoning = { max_output_tokens: 3000, reasoning: { effort: "low" as const } };

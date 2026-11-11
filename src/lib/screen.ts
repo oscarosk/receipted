@@ -66,16 +66,14 @@ export async function screenReview(title: string, rawBody: string): Promise<{ bo
     return { body: clean, screen: { ...base, reasons, injectionRemoved, verdict: injectionRemoved ? "flagged" : base.verdict, model: "heuristic" } };
   }
   try {
-    const res = await llm().chat.completions.create({
+    const res = await llm().responses.create({
       model: SCREEN_MODEL,
       ...reasoning,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: SYSTEM },
-        { role: "user", content: `<review>\n<title>${titleClean}</title>\n<body>${clean}</body>\n</review>` },
-      ],
+      instructions: SYSTEM,
+      text: { format: { type: "json_object" } },
+      input: `Return JSON for this review.\n<review>\n<title>${titleClean}</title>\n<body>${clean}</body>\n</review>`,
     });
-    const text = res.choices[0]?.message?.content ?? "{}";
+    const text = res.output_text || "{}";
     const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)) as {
       ai_written: number;
       incentivized: boolean;
