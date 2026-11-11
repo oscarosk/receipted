@@ -62,10 +62,20 @@ export default function ConsoleGrid() {
   const [tab, setTab] = useState<"reviews" | "orders" | "events">("reviews");
   const [quick, setQuick] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [pending, setPending] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const r = await fetch("/api/console", { cache: "no-store" });
-    if (r.ok) setData((await r.json()) as Data);
+    if (!r.ok) return;
+    const d = (await r.json()) as Data;
+    setData(d);
+    setPending((p) => {
+      if (p && d.orders.find((o) => o.orderId === p)?.status === "refunded") {
+        setMsg(`PayPal's verified webhook arrived: order ${p} refunded, its review proof revoked.`);
+        return null;
+      }
+      return p;
+    });
   }, []);
 
   useEffect(() => {
@@ -80,9 +90,13 @@ export default function ConsoleGrid() {
   const refund = useCallback(
     async (orderId: string) => {
       setMsg("Refund sent to PayPal. Waiting for the verified webhook to revoke the proof…");
+      setPending(orderId);
       const r = await fetch("/api/orders/refund", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId }) });
       const j = (await r.json().catch(() => ({}))) as { error?: string };
-      if (!r.ok) setMsg(j.error ?? "Refund failed");
+      if (!r.ok) {
+        setMsg(j.error ?? "Refund failed");
+        setPending(null);
+      }
       load();
     },
     [load],
