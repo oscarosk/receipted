@@ -11,21 +11,21 @@ function pickOf(a: string) {
 function Pane({ title, sub, side, tone }: { title: string; sub: string; side?: Side; tone: "bad" | "good" }) {
   const pick = side && pickOf(side.answer);
   return (
-    <div className={`rounded-2xl border bg-white p-5 ${tone === "good" ? "border-emerald-300" : "border-orange-300"}`}>
-      <h2 className="font-semibold">{title}</h2>
-      <p className="text-xs text-zinc-500">{sub}</p>
+    <div className={`rounded-sm border-t-4 bg-white p-6 ${tone === "good" ? "border-proof" : "border-boom"}`}>
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <p className="text-sm text-ink/55">{sub}</p>
       {!side ? (
         <p className="mt-6 text-sm text-zinc-400">Waiting…</p>
       ) : (
         <>
-          <ol className="mt-4 space-y-1 font-mono text-xs text-zinc-600">
+          <ol className="mt-4 space-y-1 rounded-sm bg-page p-3 font-mono text-xs leading-5 text-ink/70">
             {side.steps.map((s, i) => (
               <li key={i}>› {s.text}</li>
             ))}
           </ol>
           <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">{side.answer.replace(/PICK:.*$/m, "").trim()}</p>
           {pick && (
-            <p className={`mt-4 rounded-lg px-3 py-2 text-sm font-semibold ${tone === "good" ? "bg-emerald-50 text-emerald-900" : "bg-orange-50 text-orange-900"}`}>
+            <p className={`mt-5 rounded-sm px-3 py-2.5 font-semibold ${tone === "good" ? "bg-proof-soft text-proof" : "bg-[#ffe9df] text-[#a3300a]"}`}>
               Buys: {pick}
             </p>
           )}
@@ -53,8 +53,8 @@ export default function AgentDemo() {
   return (
     <div className="space-y-6">
       <div className="flex gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} className="flex-1 rounded-lg border border-zinc-300 px-3 py-2" />
-        <button onClick={run} disabled={busy} className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-60">
+        <input value={q} onChange={(e) => setQ(e.target.value)} className="flex-1 rounded-md border border-ink/20 bg-white px-3 py-2" />
+        <button onClick={run} disabled={busy} className="rounded-md bg-ink px-5 py-2 text-sm font-semibold text-white disabled:opacity-60">
           {busy ? "Agents shopping…" : "Run both agents"}
         </button>
       </div>

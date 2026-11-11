@@ -17,7 +17,7 @@ export default function BuyButton({ productId, label }: { productId: string; lab
   }
   return (
     <div>
-      <button onClick={buy} disabled={busy} className="rounded-full bg-[#ffc439] px-6 py-2.5 font-semibold text-zinc-900 hover:brightness-95 disabled:opacity-60">
+      <button onClick={buy} disabled={busy} className="w-full max-w-xs rounded-md bg-[#ffc439] px-6 py-3 font-semibold text-[#003087] hover:brightness-95 disabled:opacity-60">
         {busy ? "Opening PayPal…" : label}
       </button>
       {err && <p className="mt-2 text-sm text-rose-700">{err}</p>}

@@ -8,14 +8,21 @@ export async function GET() {
   await connection();
   const db = await readDb();
   const orderById = new Map(db.orders.map((o) => [o.orderId, o]));
+  // Review farms reuse sentences. Count how many reviews share each sentence.
+  const sentences = (t: string) => t.split(/(?<=[.!?])\s+/).map((x) => x.trim().toLowerCase()).filter((x) => x.length > 25);
+  const freq = new Map<string, number>();
+  for (const r of db.reviews) for (const x of new Set(sentences(r.body))) freq.set(x, (freq.get(x) ?? 0) + 1);
   const reviews = db.reviews.map((r) => {
     const o = r.orderId ? orderById.get(r.orderId) : undefined;
     // Unproven (MegaBoom) reviews were never screened at write time; score them here for comparison.
     const injected = stripInjection(r.body).removed.length > 0;
     const sc = r.screen ?? { ...heuristicScreen(r.title, r.body), injectionRemoved: injected, model: "heuristic" };
+    const repeated = Math.max(0, ...sentences(r.body).map((x) => (freq.get(x) ?? 1) - 1));
     return {
       id: r.id,
-      store: r.store,
+      store: r.store === "megaboom" ? "MegaBoom" : "Quiet Hour",
+      repeated,
+      likelyFake: !r.proof && (sc.aiWrittenScore >= 0.6 || repeated >= 5),
       product: product(r.productId)?.name ?? r.productId,
       rating: r.rating,
       title: r.title,

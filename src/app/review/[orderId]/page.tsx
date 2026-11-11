@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
-import { product, STORES } from "@/lib/catalog";
+import { product } from "@/lib/catalog";
 import { readDb } from "@/lib/db";
 import { decodeGrant, REVIEWER_COOKIE } from "@/lib/session";
 import { Shell } from "@/components/ui";
@@ -19,9 +19,9 @@ async function ReviewView(props: PageProps<"/review/[orderId]">) {
   const existing = db.reviews.find((r) => r.orderId === orderId);
   if (!o || !p) return <Shell><p>Order not found.</p></Shell>;
   return (
-    <Shell store={STORES[o.store]}>
+    <Shell theme={o.store}>
       <div className="max-w-xl">
-        <h1 className="text-2xl font-semibold">Review {p.name}</h1>
+        <h1 className="font-serif text-3xl">Review {p.name}</h1>
         <p className="mt-1 text-sm text-zinc-500">Order {o.orderId}</p>
         {sp.error && <p className="mt-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{String(sp.error)}</p>}
         {existing ? (
@@ -35,7 +35,7 @@ async function ReviewView(props: PageProps<"/review/[orderId]">) {
           <p className="mt-6 text-zinc-700">This order is {o.status}, so it can&apos;t carry a proven review.</p>
         ) : grant?.orderId === orderId ? (
           <div className="mt-6 space-y-4">
-            <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
+            <p className="rounded-sm border-l-4 border-proof bg-white p-3 text-sm">
               ✓ PayPal confirmed you&apos;re the account that paid for this order ({grant.matchedOn === "payer_id" ? "PayPal account ID" : "PayPal account email"} matched).
             </p>
             <ReviewForm orderId={orderId} productHref={`/store/${o.store}/${o.productId}`} />
@@ -46,7 +46,7 @@ async function ReviewView(props: PageProps<"/review/[orderId]">) {
               To keep reviews honest, sign in with the PayPal account you paid with. Receipted only checks that it&apos;s the same account; it
               never sees your card or bank details.
             </p>
-            <a href={`/api/review/login?order=${orderId}`} className="inline-block rounded-full bg-[#0070e0] px-5 py-2.5 text-sm font-semibold text-white">
+            <a href={`/api/review/login?order=${orderId}`} className="inline-block rounded-md bg-[#0070e0] px-5 py-3 text-sm font-semibold text-white hover:bg-[#005ea6]">
               Log in with PayPal to review
             </a>
           </div>
