@@ -25,5 +25,5 @@ services:
         generateValue: true
       - key: RECEIPTED_SIGNING_KEY
         sync: false
-      - key: ANTHROPIC_API_KEY
+      - key: OPENAI_API_KEY
         sync: false

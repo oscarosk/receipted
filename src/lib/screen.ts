@@ -2,7 +2,7 @@
 // 1) Strip prompt-injection text before a review is ever shown to an AI shopping agent.
 // 2) Flag reviews that look machine-written or incentivized. A flag never deletes a proven review;
 //    it is shown next to the proof so people and agents can weigh it.
-import Anthropic from "@anthropic-ai/sdk";
+import { hasLlm, llm, reasoning, SCREEN_MODEL } from "./llm";
 import type { Screen } from "./db";
 
 // Phrases aimed at a model rather than a person. Deterministic, runs before any model sees the text.
@@ -48,7 +48,6 @@ export function heuristicScreen(title: string, body: string): Omit<Screen, "inje
   return { verdict: score >= 0.6 || incentivized ? "flagged" : "clean", aiWrittenScore: Number(score.toFixed(2)), incentivized, reasons };
 }
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-5-5";
 
 const SYSTEM = `You screen customer product reviews for a review-proof service.
 Return ONLY a JSON object: {"ai_written": number 0..1, "incentivized": boolean, "reasons": string[] (max 3, short)}.
@@ -63,18 +62,20 @@ export async function screenReview(title: string, rawBody: string): Promise<{ bo
   const injectionRemoved = removed.length > 0;
   const reasons = injectionRemoved ? ["removed text addressed to AI agents", ...base.reasons] : [...base.reasons];
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!hasLlm()) {
     return { body: clean, screen: { ...base, reasons, injectionRemoved, verdict: injectionRemoved ? "flagged" : base.verdict, model: "heuristic" } };
   }
   try {
-    const client = new Anthropic();
-    const msg = await client.messages.create({
-      model: MODEL,
-      max_tokens: 200,
-      system: SYSTEM,
-      messages: [{ role: "user", content: `<review>\n<title>${titleClean}</title>\n<body>${clean}</body>\n</review>` }],
+    const res = await llm().chat.completions.create({
+      model: SCREEN_MODEL,
+      ...reasoning,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: `<review>\n<title>${titleClean}</title>\n<body>${clean}</body>\n</review>` },
+      ],
     });
-    const text = msg.content.map((c) => ("text" in c ? c.text : "")).join("");
+    const text = res.choices[0]?.message?.content ?? "{}";
     const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)) as {
       ai_written: number;
       incentivized: boolean;
@@ -91,7 +92,7 @@ export async function screenReview(title: string, rawBody: string): Promise<{ bo
         incentivized,
         injectionRemoved,
         reasons: all,
-        model: MODEL,
+        model: SCREEN_MODEL,
       },
     };
   } catch {
