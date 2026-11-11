@@ -74,6 +74,7 @@ export function createOrder(args: {
   referenceId: string;
   returnUrl: string;
   cancelUrl: string;
+  brandName?: string;
 }) {
   return pp<Order>("/v2/checkout/orders", {
     method: "POST",
@@ -94,7 +95,7 @@ export function createOrder(args: {
             cancel_url: args.cancelUrl,
             user_action: "PAY_NOW",
             shipping_preference: "NO_SHIPPING",
-            brand_name: "Quiet Hour Audio (demo)",
+            brand_name: args.brandName ?? "Quiet Hour Audio (demo)",
           },
         },
       },

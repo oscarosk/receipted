@@ -1,49 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
-import { emailOf, identityFromCode } from "@/lib/paypal";
+import { emailOf, identityFromCode, type UserInfo } from "@/lib/paypal";
 import { readGate, updateGate } from "@/lib/gateStore";
+import { readDb } from "@/lib/db";
 import { baseUrl } from "@/lib/baseUrl";
+import { encodeGrant, REVIEWER_COOKIE } from "@/lib/session";
 
-// Step 4: the heart of Receipted. Is the person signing in the same PayPal account that paid?
+/** The heart of Receipted: is the person signing in the same PayPal account that paid? */
+function samePayer(order: { payerId?: string; payerEmail?: string } | undefined, who: UserInfo) {
+  const email = emailOf(who);
+  if (order?.payerId && who.payer_id) return { matches: order.payerId === who.payer_id, on: "payer_id" as const, email };
+  if (order?.payerEmail && email) return { matches: order.payerEmail.toLowerCase() === email, on: "email" as const, email };
+  return { matches: false, on: "email" as const, email };
+}
+
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const base = baseUrl(req);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state") ?? "";
   const expected = req.cookies.get("rc_login_state")?.value;
+  const isReview = state.startsWith("r.");
+  const orderId = isReview ? state.split(".")[1] : state.split(".")[0];
+  const back = (q: string) => (isReview ? `${base}/review/${orderId}?${q}` : `${base}/gate?${q}`);
+
+  if (url.searchParams.get("error")) return NextResponse.redirect(back(`error=${encodeURIComponent("PayPal sign-in was cancelled")}`));
   if (!code || !expected || state !== expected) {
-    return NextResponse.redirect(`${base}/gate?error=${encodeURIComponent("Sign-in state did not match; please try again")}`);
+    return NextResponse.redirect(back(`error=${encodeURIComponent("Sign-in state did not match; please try again")}`));
   }
-  const orderId = state.split(".")[0];
   try {
     const who = await identityFromCode(code);
-    const { orders } = await readGate();
-    const order = orders.find((o) => o.orderId === orderId);
-    const reviewerPayerId = who.payer_id;
-    // Strong match: the PayPal account ID. Fallback when that attribute is not granted: the account email.
-    const reviewerEmail = emailOf(who);
-    const byId = Boolean(order?.payerId && reviewerPayerId && order.payerId === reviewerPayerId);
-    const byEmail =
-      !reviewerPayerId && Boolean(order?.payerEmail && reviewerEmail && order.payerEmail.toLowerCase() === reviewerEmail);
-    const matches = byId || byEmail;
+
+    if (isReview) {
+      const order = (await readDb()).orders.find((o) => o.orderId === orderId);
+      const m = samePayer(order, who);
+      const res = NextResponse.redirect(
+        m.matches ? back("verified=1") : back(`error=${encodeURIComponent("That PayPal account didn't pay for this order, so it can't review it")}`),
+      );
+      res.cookies.delete("rc_login_state");
+      if (m.matches) {
+        res.cookies.set(REVIEWER_COOKIE, encodeGrant({ orderId, matchedOn: m.on, name: order?.payerName }), {
+          httpOnly: true,
+          sameSite: "lax",
+          secure: base.startsWith("https"),
+          maxAge: 1800,
+          path: "/",
+        });
+      }
+      return res;
+    }
+
+    // Day-1 gate (kept as a self-test page).
+    const order = (await readGate()).orders.find((o) => o.orderId === orderId);
+    const m = samePayer(order, who);
     await updateGate((s) => {
       s.checks.unshift({
         orderId,
-        reviewerPayerId,
+        reviewerPayerId: who.payer_id,
         verifiedAccount: who.verified_account === true || who.verified_account === "true",
-        matches,
+        matches: m.matches,
         at: new Date().toISOString(),
-        note: reviewerPayerId
-          ? "matched on PayPal account ID"
-          : reviewerEmail
-            ? `no payer ID granted; compared account email ${reviewerEmail}`
-            : "PayPal returned neither payer ID nor email; check the app's Log in with PayPal attributes",
+        note: m.on === "payer_id" ? "matched on PayPal account ID" : m.email ? `no payer ID granted; compared account email ${m.email}` : "PayPal returned neither payer ID nor email",
       });
     });
-    const res = NextResponse.redirect(`${base}/gate?order=${orderId}`);
+    const res = NextResponse.redirect(back(`order=${orderId}`));
     res.cookies.delete("rc_login_state");
     return res;
   } catch (e) {
-    const msg = encodeURIComponent(e instanceof Error ? e.message.slice(0, 200) : "login failed");
-    return NextResponse.redirect(`${base}/gate?error=${msg}`);
+    return NextResponse.redirect(back(`error=${encodeURIComponent(e instanceof Error ? e.message.slice(0, 200) : "login failed")}`));
   }
 }

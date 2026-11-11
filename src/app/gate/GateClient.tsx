@@ -24,6 +24,7 @@ export default function GateClient({ initialOrderId, initialError }: { initialOr
   const orderId = initialOrderId;
   const [error, setError] = useState<string | null>(initialError);
   const [busy, setBusy] = useState(false);
+  const [refundSent, setRefundSent] = useState(false);
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/gate/state", { cache: "no-store" });
@@ -71,7 +72,7 @@ export default function GateClient({ initialOrderId, initialError }: { initialOr
     if (!res.ok) {
       const json = (await res.json().catch(() => null)) as { error?: string } | null;
       setError(json?.error ?? `Refund failed (${res.status})`);
-    }
+    } else setRefundSent(true);
     setBusy(false);
     refresh();
   }
@@ -131,8 +132,8 @@ export default function GateClient({ initialOrderId, initialError }: { initialOr
       </Step>
 
       <Step n={4} title="Refund: verified webhook flips the proof" ok={refundEvent ? true : undefined}>
-        <button className={btn} disabled={busy || !order?.captureId || order?.refunded} onClick={refund}>
-          Refund this order
+        <button className={btn} disabled={busy || refundSent || !order?.captureId || order?.refunded} onClick={refund}>
+          {busy ? "Refunding…" : refundSent && !order?.refunded ? "Refund sent, waiting for PayPal webhook…" : "Refund this order"}
         </button>
         <p>
           Proof status: <b>{order?.refunded ? "Refunded (proof removed)" : order?.captureId ? "Paid and not refunded" : "-"}</b>
