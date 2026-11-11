@@ -3,6 +3,7 @@ services:
     name: receipted
     runtime: node
     plan: free
+    region: ohio
     buildCommand: npm ci && npm run build
     startCommand: npm start
     healthCheckPath: /
