@@ -77,7 +77,13 @@ const CURSOR = `
 let browser;
 async function launch() {
   if (browser) return browser;
-  const args = ["--disable-blink-features=AutomationControlled", `--window-size=${SIZE.width},${SIZE.height + 120}`];
+  // Ignore Windows display scaling so the whole 1600x900 page fits on screen and is recorded in full.
+  const args = [
+    "--disable-blink-features=AutomationControlled",
+    "--force-device-scale-factor=1",
+    "--window-position=0,0",
+    `--window-size=${SIZE.width},${SIZE.height + 100}`,
+  ];
   // Signed, installed browsers first: Windows Smart App Control can block Playwright's own Chromium.
   const channels = [...(process.env.BROWSER ? [process.env.BROWSER] : []), "chrome", "msedge", undefined].filter((c, i, a) => a.indexOf(c) === i);
   let last;
@@ -187,6 +193,7 @@ async function paypalLogin(s, who, depth = 0) {
   await page.waitForURL(/paypal\.com/, { timeout: 60000 });
   await page.waitForLoadState("domcontentloaded");
   await sleep(1200);
+  await dismissCookies(page);
   // Already signed in to PayPal in this window (e.g. reviewing right after paying)? Then there is
   // no login form: PayPal goes straight to the consent or payment screen.
   const anyForm = page.locator('#email, #password, input[type="password"]');
@@ -223,6 +230,12 @@ async function paypalLogin(s, who, depth = 0) {
   await s.click(loginBtn);
 }
 
+/** PayPal's cookie banner covers the bottom of its pages; close it without a visible click. */
+async function dismissCookies(page) {
+  const btn = page.locator("#acceptAllButton, #bannerAcceptButton").or(page.getByRole("button", { name: /^(yes, i accept|accept( all)?( cookies)?)$/i }));
+  if (await btn.first().isVisible({ timeout: 1500 }).catch(() => false)) await btn.first().click().catch(() => {});
+}
+
 async function paypalPay(s) {
   const { page } = s;
   const pay = page
@@ -230,6 +243,7 @@ async function paypalPay(s) {
     .or(page.locator("#payment-submit-btn"))
     .or(page.getByRole("button", { name: /^(pay|pay now|complete purchase|continue to review order|continue)$/i }));
   await pay.first().waitFor({ state: "visible", timeout: 45000 });
+  await dismissCookies(page);
   await sleep(1200);
   await s.click(pay);
 }
@@ -452,7 +466,7 @@ const SCENES = {
 };
 
 // ---------- run ----------
-const ORDER = ["01-megaboom", "02-injection", "03-agents", "05-buy", "07-refused", "06-review", "09-refund", "10-console", "11-agents-api", "12-home"];
+const ORDER = ["01-megaboom", "02-injection", "03-agents", "05-buy", "07-refused", "06-review", "09-refund", "10-console", "12-home"];
 const args = process.argv.slice(2);
 try {
   if (!args.length || args[0] === "list") {
