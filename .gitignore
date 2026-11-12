@@ -45,3 +45,8 @@ next-env.d.ts
 
 # local data
 .data/
+
+# demo recorder
+demo/.env.demo
+demo/out/
+demo/node_modules/

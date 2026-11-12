@@ -1,0 +1,12 @@
+{
+  "name": "receipted-demo-recorder",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "populate": "node record.mjs populate",
+    "record": "node record.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.56.0"
+  }
+}
