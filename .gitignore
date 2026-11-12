@@ -50,3 +50,4 @@ next-env.d.ts
 demo/.env.demo
 demo/out/
 demo/node_modules/
+!demo/.env.demo.example
