@@ -9,7 +9,7 @@ page), the script pauses: finish that step by hand in the window, then press Ent
 ```
 cd demo
 npm install
-npx playwright install chromium ffmpeg
+npx playwright install ffmpeg
 copy .env.demo.example .env.demo      (macOS/Linux: cp)
 ```
 

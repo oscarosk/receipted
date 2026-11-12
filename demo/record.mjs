@@ -78,11 +78,19 @@ let browser;
 async function launch() {
   if (browser) return browser;
   const args = ["--disable-blink-features=AutomationControlled", `--window-size=${SIZE.width},${SIZE.height + 120}`];
-  try {
-    browser = await chromium.launch({ channel: "chrome", headless: !!process.env.HEADLESS, args });
-  } catch {
-    browser = await chromium.launch({ headless: !!process.env.HEADLESS, args });
+  // Signed, installed browsers first: Windows Smart App Control can block Playwright's own Chromium.
+  const channels = [process.env.BROWSER, "chrome", "msedge", undefined].filter((c, i, a) => a.indexOf(c) === i);
+  let last;
+  for (const channel of channels) {
+    try {
+      browser = await chromium.launch({ ...(channel ? { channel } : {}), headless: !!process.env.HEADLESS, args });
+      console.log(`   browser: ${channel ?? "playwright chromium"}`);
+      break;
+    } catch (e) {
+      last = e;
+    }
   }
+  if (!browser) throw last;
   return browser;
 }
 
