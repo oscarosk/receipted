@@ -46,19 +46,29 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const CURSOR = `
 (() => {
   if (window.__rcCursor) return; window.__rcCursor = true;
+  // Windows-style pointer: white arrow with a black outline and a soft shadow; a hand over clickable things.
+  const ARROW = '<svg width="20" height="30" viewBox="0 0 20 30"><path d="M1.5 1.5 L1.5 23 L6.6 18.2 L10.2 26.6 L13.6 25.1 L10.1 16.9 L17 16.9 Z" fill="#fff" stroke="#000" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+  const HAND = '<svg width="24" height="28" viewBox="0 0 24 28"><path d="M8.2 2.2c1 0 1.8.8 1.8 1.8v8.1c.3-.9 1.1-1.4 2-1.4 1 0 1.8.7 1.9 1.7.4-.6 1.1-1 1.8-1 1.1 0 1.9.8 1.9 1.9v.5c.4-.4.9-.6 1.5-.6 1.1 0 1.9.9 1.9 1.9v5.6c0 4.3-3 7.4-7.3 7.4h-1.8c-2.6 0-4.4-1.2-5.9-3.4L2 17.6c-.6-.9-.4-2 .4-2.6.8-.6 1.9-.5 2.6.3l1.4 1.6V4c0-1 .8-1.8 1.8-1.8z" fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/><path d="M10 12v5M13.9 12.4v4.6M17.6 13.6v3.4" stroke="#000" stroke-width="1" stroke-linecap="round"/></svg>';
   const add = () => {
     const c = document.createElement('div');
-    c.id = '__rc_cursor';
-    c.style.cssText = 'position:fixed;left:0;top:0;width:22px;height:22px;z-index:2147483647;pointer-events:none;transform:translate(-3px,-2px);transition:transform 60ms linear';
-    c.innerHTML = '<svg width="22" height="22" viewBox="0 0 22 22"><path d="M3 2 L3 18 L7.5 13.8 L10.6 20.5 L13.4 19.3 L10.4 12.7 L16.5 12.7 Z" fill="#111" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+    c.style.cssText = 'position:fixed;left:-50px;top:-50px;z-index:2147483647;pointer-events:none;filter:drop-shadow(1px 2px 1.5px rgba(0,0,0,.35))';
+    c.innerHTML = ARROW;
+    let hand = false;
     document.documentElement.appendChild(c);
-    addEventListener('mousemove', e => { c.style.left = e.clientX + 'px'; c.style.top = e.clientY + 'px'; }, true);
+    const CLICKABLE = 'a,button,select,summary,label,[role=button],[role=radio],[role=tab],[role=link],input[type=submit],input[type=button]';
+    addEventListener('mousemove', e => {
+      const over = e.target && e.target.closest && e.target.closest(CLICKABLE);
+      if (!!over !== hand) { hand = !!over; c.innerHTML = hand ? HAND : ARROW; }
+      // Arrow tip sits at the pointer; the hand's fingertip does.
+      c.style.left = (e.clientX - (hand ? 7 : 1)) + 'px';
+      c.style.top = (e.clientY - (hand ? 2 : 1)) + 'px';
+    }, true);
     addEventListener('mousedown', e => {
       const r = document.createElement('div');
-      r.style.cssText = 'position:fixed;z-index:2147483646;pointer-events:none;border-radius:50%;border:2px solid #0b7a55;width:10px;height:10px;left:' + (e.clientX-5) + 'px;top:' + (e.clientY-5) + 'px;transition:all 420ms ease-out;opacity:.9';
+      r.style.cssText = 'position:fixed;z-index:2147483646;pointer-events:none;border-radius:50%;background:rgba(0,0,0,.18);width:8px;height:8px;left:' + (e.clientX-4) + 'px;top:' + (e.clientY-4) + 'px;transition:all 380ms ease-out';
       document.documentElement.appendChild(r);
-      requestAnimationFrame(() => { r.style.width='44px'; r.style.height='44px'; r.style.left=(e.clientX-22)+'px'; r.style.top=(e.clientY-22)+'px'; r.style.opacity='0'; });
-      setTimeout(() => r.remove(), 500);
+      requestAnimationFrame(() => { r.style.width='36px'; r.style.height='36px'; r.style.left=(e.clientX-18)+'px'; r.style.top=(e.clientY-18)+'px'; r.style.opacity='0'; });
+      setTimeout(() => r.remove(), 450);
     }, true);
   };
   if (document.documentElement) add(); else addEventListener('DOMContentLoaded', add);
