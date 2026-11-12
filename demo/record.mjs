@@ -187,7 +187,12 @@ async function paypalLogin(s, who, depth = 0) {
   await page.waitForURL(/paypal\.com/, { timeout: 60000 });
   await page.waitForLoadState("domcontentloaded");
   await sleep(1200);
-  // Already logged in? Some flows skip straight to review/consent.
+  // Already signed in to PayPal in this window (e.g. reviewing right after paying)? Then there is
+  // no login form: PayPal goes straight to the consent or payment screen.
+  const anyForm = page.locator('#email, #password, input[type="password"]');
+  const consentOrPay = page.getByRole("button", { name: /agree and (connect|continue)|^pay$|complete purchase/i });
+  await anyForm.first().or(consentOrPay.first()).waitFor({ state: "visible", timeout: 20000 }).catch(() => {});
+  if (!(await anyForm.first().isVisible().catch(() => false))) return;
   const email = page.locator("#email");
   if (await email.isVisible().catch(() => false)) {
     await email.fill("");
