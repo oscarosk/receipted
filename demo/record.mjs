@@ -79,7 +79,7 @@ async function launch() {
   if (browser) return browser;
   const args = ["--disable-blink-features=AutomationControlled", `--window-size=${SIZE.width},${SIZE.height + 120}`];
   // Signed, installed browsers first: Windows Smart App Control can block Playwright's own Chromium.
-  const channels = [process.env.BROWSER, "chrome", "msedge", undefined].filter((c, i, a) => a.indexOf(c) === i);
+  const channels = [...(process.env.BROWSER ? [process.env.BROWSER] : []), "chrome", "msedge", undefined].filter((c, i, a) => a.indexOf(c) === i);
   let last;
   for (const channel of channels) {
     try {
