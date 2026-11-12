@@ -201,11 +201,21 @@ async function paypalLogin(s, who, depth = 0) {
       return paypalLogin(s, who, depth + 1);
     }
   }
-  const pw = page.locator("#password");
-  if (await pw.isVisible({ timeout: 8000 }).catch(() => false)) {
-    await s.type(pw, buyer.password, 25);
-    await s.click(page.locator("#btnLogin"));
+  // After the email PayPal may show the password box, or a one-time-code screen with a
+  // "use password instead" link. Wait for whichever appears.
+  const pw = page.locator('#password, input[type="password"]');
+  const usePw = page
+    .getByRole("link", { name: /(log in|use|try).{0,20}password/i })
+    .or(page.getByRole("button", { name: /(log in|use|try).{0,20}password/i }));
+  await pw.first().or(usePw.first()).waitFor({ state: "visible", timeout: 20000 });
+  if (!(await pw.first().isVisible().catch(() => false))) {
+    await s.click(usePw);
+    await pw.first().waitFor({ state: "visible", timeout: 15000 });
   }
+  await sleep(500);
+  await s.type(pw, buyer.password, 25);
+  const loginBtn = page.locator("#btnLogin").or(page.getByRole("button", { name: /^log in$/i }));
+  await s.click(loginBtn);
 }
 
 async function paypalPay(s) {
