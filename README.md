@@ -15,7 +15,7 @@ When money goes back, PayPal's verified webhook revokes the proof automatically.
 get the same proof over MCP, signed with Ed25519 so they can check it themselves, and never see text planted to steer them.
 
 - **Live demo:** https://receipted.onrender.com (try it in 3 minutes: https://receipted.onrender.com/judge)
-- **Video:** _YouTube link_
+- **Video:** https://youtu.be/dVTA1rZgTuo
 - Built for the PayPal AI Hackathon 2026. Everything runs on the PayPal sandbox; no real money moves. Both stores are fictional.
 
 ## What you can try
