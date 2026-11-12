@@ -89,6 +89,7 @@ const NAV = [
   { href: "/store/megaboom", t: "MegaBoom" },
   { href: "/agent", t: "Agent demo" },
   { href: "/console", t: "Console" },
+  { href: "/judge", t: "Judges" },
 ];
 
 export function Shell({ children, theme = "receipted", wide = false }: { children: React.ReactNode; theme?: Theme; wide?: boolean }) {

@@ -1,0 +1,11 @@
+# Keeps the free Render instance awake during judging so the first visit doesn't wait ~50 s.
+name: keep-alive
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fsS -o /dev/null -w "%{http_code}\n" --max-time 90 https://receipted.onrender.com/ || true
